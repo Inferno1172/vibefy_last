@@ -6,6 +6,9 @@ import streamlit as st
 from modules.music_service import search_songs, get_mood_keywords
 from modules.themes import apply_mood_theme
 
+
+
+
 # Page configuration
 st.set_page_config(
     page_title="Music for Your Mood - Vibefy",
@@ -105,7 +108,7 @@ with col2:
     if st.button("🔄 New Mood Detection", use_container_width=True):
         st.switch_page("pages/2_detect_mood.py")
     
-    if st.button("💬 Chat with AI", use_container_width=True):
+    if st.button("💬 Chat with AI", use_container_width=True, key="chat_button_quick"):
         st.switch_page("pages/3_chat.py")
     
     if st.button("🔀 Shuffle Music", use_container_width=True):
@@ -159,7 +162,7 @@ with col2:
         st.switch_page("pages/2_detect_mood.py")
 
 with col3:
-    if st.button("💬 Chat with AI", use_container_width=True):
+    if st.button("💬 Chat with AI", use_container_width=True, key="chat_button_footer"):
         st.switch_page("pages/3_chat.py")
 
 # Footer info

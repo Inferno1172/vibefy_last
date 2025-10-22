@@ -5,6 +5,7 @@ import os
 import random
 from openai import OpenAI, OpenAIError
 from dotenv import load_dotenv
+import streamlit as st
 
 load_dotenv()
 
@@ -19,32 +20,41 @@ logging.basicConfig(
 
 # Initialize OpenAI client with error handling
 try:
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
     if not client.api_key:
         raise ValueError("OpenAI API key not found")
 except Exception as e:
     logging.error(f"Failed to initialize OpenAI client: {e}")
     client = None
 
-ASSISTANT_ID = "asst_N2303DmXSZTgS7iidA2feLDZ"
+ASSISTANT_ID = "asst_sFurPi1mR8QuB92lOmjzpJKr"
 
 def get_or_create_thread(session_state):
     """Ensures we have one persistent thread per user session."""
     try:
         if client is None:
-            raise Exception("OpenAI client not initialized")
-            
-        if "thread_id" not in session_state:
+            raise Exception("OpenAI client not initialized. Check your API key.")
+
+        # Create new thread if not exists or invalid
+        if "thread_id" not in session_state or not session_state.thread_id:
             logging.info("Creating a new thread for session.")
             thread = client.beta.threads.create()
+
+            if not thread or not getattr(thread, "id", None):
+                raise Exception("Thread creation failed — no thread ID returned.")
+
             session_state.thread_id = thread.id
             logging.info(f"New thread created: {thread.id}")
         else:
             logging.debug(f"Using existing thread: {session_state.thread_id}")
+
         return session_state.thread_id
+
     except Exception as e:
         logging.exception("Error creating or retrieving thread.")
-        raise e
+        # Return a clear failure message instead of None
+        raise RuntimeError(f"Failed to initialize chat thread: {e}")
+
 
 def send_message(user_message, thread_id):
     """Sends a user message and gets the assistant's reply."""

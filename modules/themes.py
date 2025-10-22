@@ -196,14 +196,8 @@ def apply_mood_theme(mood):
     }}
     
     @keyframes slideUp {{
-        from {{ 
-            opacity: 0;
-            transform: translateY(30px);
-        }}
-        to {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
+        from {{ opacity: 0; transform: translateY(30px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
     }}
     
     @keyframes fadeIn {{
@@ -215,19 +209,74 @@ def apply_mood_theme(mood):
     .stMarkdown, .stText, .stTitle, .stHeader, .stSubheader {{
         color: white !important;
     }}
-    
-    /* Style streamlit components */
+
+    /* Style text input and text area */
     .stTextInput input, .stTextArea textarea {{
         background: rgba(255, 255, 255, 0.1) !important;
         color: white !important;
         border: 1px solid {config['primary']} !important;
+        border-radius: 10px;
+        padding: 1rem;
+        font-size: 1rem;
+        transition: all 0.3s ease;
     }}
-    
+
+    .stTextArea textarea:focus {{
+        box-shadow: 0 0 0 2px {config['primary']}44 !important;
+        border-color: {config['primary']} !important;
+    }}
+
+    /* Style selectboxes and radio buttons */
     .stSelectbox select, .stRadio label {{
+        color: white !important;
+    }}
+
+    /* Style form submit button */
+    [data-testid="stForm"] {{
+        border-color: {config['primary']}44 !important;
+        border-radius: 15px;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+    }}
+
+    /* Style manual selection cards */
+    [data-testid="stHorizontalBlock"] {{
+        gap: 1rem;
+    }}
+
+    .stButton button {{
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid {config['primary']}44;
+        color: white !important;
+        padding: 1.5rem;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        height: 100%;
+        width: 100%;
+    }}
+
+    .stButton button:hover {{
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.15);
+        border-color: {config['primary']};
+        box-shadow: 0 4px 15px {config['primary']}33;
+    }}
+
+    /* Improve visibility of all text */
+    .stText, .stMarkdown {{
+        color: rgba(255, 255, 255, 0.9) !important;
+    }}
+
+    /* Style info boxes */
+    .stAlert {{
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-color: {config['primary']}44 !important;
         color: white !important;
     }}
     </style>
     """
+    return css
+
     
     st.markdown(css, unsafe_allow_html=True)
     return config

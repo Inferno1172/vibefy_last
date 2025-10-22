@@ -8,6 +8,8 @@ from modules.themes import apply_mood_theme
 from modules.ai_companion import get_or_create_thread, send_message, get_fallback_response
 import logging
 
+
+
 # Local logger
 logger = logging.getLogger("vibefy_pages")
 if not logger.handlers:
