@@ -1,0 +1,93 @@
+# Vibefy 2.0 - Git Ignore File
+
+# ⚠️ CRITICAL: API Keys and Secrets
+.env
+.streamlit/secrets.toml
+*.key
+*.pem
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+vibefy_debug.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Model files (if large)
+models/*.h5
+models/*.pkl
+models/*.pt
+
+# Media files (if accidentally added)
+*.mp4
+*.avi
+*.mov
+*.mp3
+*.wav
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Keep these files
+!.streamlit/config.toml
+!models/.gitkeep
+!requirements.txt
+!README.md
