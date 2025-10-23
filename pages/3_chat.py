@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import streamlit as st
 from modules.themes import apply_mood_theme
-from modules.ai_companion import get_or_create_thread, send_message, get_fallback_response
+from modules.ai_companion import send_message, get_fallback_response
 import logging
 
 
@@ -110,14 +110,11 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("Vibefy is thinking..."):
             try:
-                # Get or create thread for this session
-                thread_id = get_or_create_thread(st.session_state)
+                # Ensure mood is set
+                current_mood = getattr(st.session_state, 'mood', 'neutral')
                 
-                # Create context-aware message
-                context_message = f"User's current mood: {st.session_state.mood}. Confidence: {conf_display}. User says: {user_input}"
-                
-                # Get response from AI
-                response = send_message(context_message, thread_id)
+                # Get response from Gemini
+                response = send_message(user_input, st.session_state)
                 
                 # Display and save response
                 st.write(response)
@@ -128,15 +125,15 @@ if user_input:
                 
             except Exception as e:
                 logger.exception("AI response failed")
-                # Use fallback response
-                fallback_response = get_fallback_response(st.session_state.mood)
+                # Use fallback response with safe mood handling
+                current_mood = getattr(st.session_state, 'mood', 'neutral')
+                fallback_response = get_fallback_response(current_mood)
                 st.write(fallback_response)
                 st.session_state.chat_history.append({
                     "role": "assistant",
                     "content": fallback_response
                 })
                 st.error(f"Note: Using fallback response due to: {str(e)}")
-
 # Sidebar with chat actions
 with st.sidebar:
     st.markdown("### 💬 Chat Options")

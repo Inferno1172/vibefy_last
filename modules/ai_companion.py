@@ -3,9 +3,9 @@ import requests
 import logging
 import os
 import random
-from openai import OpenAI, OpenAIError
-from dotenv import load_dotenv
+import google.generativeai as genai
 import streamlit as st
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -18,113 +18,96 @@ logging.basicConfig(
     ],
 )
 
-# Initialize OpenAI client with error handling
+# Initialize Gemini client with error handling
 try:
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-    if not client.api_key:
-        raise ValueError("OpenAI API key not found")
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    # Test the configuration
+    model = genai.GenerativeModel('gemini-2.5-flash')
 except Exception as e:
-    logging.error(f"Failed to initialize OpenAI client: {e}")
-    client = None
+    logging.error(f"Failed to initialize Gemini client: {e}")
+    genai = None
 
-ASSISTANT_ID = "asst_sFurPi1mR8QuB92lOmjzpJKr"
+# System instructions for mood-based companion
+SYSTEM_INSTRUCTIONS = """
+You are Vibefy, an empathetic AI companion designed to support users based on their current mood. 
+Your role is to provide emotional support, active listening, and helpful responses tailored to the user's emotional state.
 
-def get_or_create_thread(session_state):
-    """Ensures we have one persistent thread per user session."""
+Guidelines:
+- Always acknowledge the user's current mood in your responses
+- Be empathetic, supportive, and non-judgmental
+- Offer coping strategies when appropriate
+- Suggest mood-appropriate activities or reflections
+- Keep responses conversational and natural
+- If the mood is negative, focus on validation and support
+- If the mood is positive, celebrate and amplify the good feelings
+- For neutral moods, offer gentle exploration or mindfulness
+
+Remember: You're here to listen, support, and help users process their emotions.
+"""
+
+# Store chat history in session state (no need for threads like OpenAI)
+def initialize_chat_session(session_state):
+    """Initialize Gemini chat session with system instructions"""
     try:
-        if client is None:
-            raise Exception("OpenAI client not initialized. Check your API key.")
-
-        # Create new thread if not exists or invalid
-        if "thread_id" not in session_state or not session_state.thread_id:
-            logging.info("Creating a new thread for session.")
-            thread = client.beta.threads.create()
-
-            if not thread or not getattr(thread, "id", None):
-                raise Exception("Thread creation failed — no thread ID returned.")
-
-            session_state.thread_id = thread.id
-            logging.info(f"New thread created: {thread.id}")
-        else:
-            logging.debug(f"Using existing thread: {session_state.thread_id}")
-
-        return session_state.thread_id
-
+        if genai is None:
+            raise Exception("Gemini client not initialized. Check your API key.")
+        
+        # Create a new chat model with system instructions
+        model = genai.GenerativeModel(
+            model_name='gemini-2.5-flash',  # or 'gemini-pro'
+            system_instruction=SYSTEM_INSTRUCTIONS
+        )
+        
+        # Start a new chat session
+        chat_session = model.start_chat(history=[])
+        
+        # Store in session state
+        session_state.gemini_chat = chat_session
+        logging.info("New Gemini chat session initialized")
+        
+        return chat_session
+        
     except Exception as e:
-        logging.exception("Error creating or retrieving thread.")
-        # Return a clear failure message instead of None
-        raise RuntimeError(f"Failed to initialize chat thread: {e}")
+        logging.exception("Error initializing Gemini chat session")
+        raise RuntimeError(f"Failed to initialize chat: {e}")
 
+def get_or_create_chat(session_state):
+    """Get existing chat session or create new one"""
+    if "gemini_chat" not in session_state:
+        return initialize_chat_session(session_state)
+    return session_state.gemini_chat
 
-def send_message(user_message, thread_id):
-    """Sends a user message and gets the assistant's reply."""
+def send_message(user_message, session_state):
+    """Send message to Gemini and get response"""
     try:
-        if client is None:
+        if genai is None:
             return "⚠️ AI service is currently unavailable. Please check your API configuration."
             
-        logging.info(f"Sending message to assistant (thread: {thread_id})")
+        logging.info("Sending message to Gemini")
         
-        # Add user message to thread
-        client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=user_message,
-        )
-
-        # Create a run
-        run = client.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=ASSISTANT_ID,
-        )
-        logging.info(f"Run created: {run.id}")
-
-        # Wait for completion with timeout
-        start_time = time.time()
-        timeout = 30  # 30 seconds timeout
+        # Get or create chat session
+        chat_session = get_or_create_chat(session_state)
         
-        while time.time() - start_time < timeout:
-            run_status = client.beta.threads.runs.retrieve(
-                thread_id=thread_id,
-                run_id=run.id
-            )
-            
-            if run_status.status == "completed":
-                # Get the messages
-                messages = client.beta.threads.messages.list(thread_id=thread_id)
-                
-                # Find the latest assistant message
-                for message in messages.data:
-                    if message.role == "assistant":
-                        if hasattr(message, 'content') and message.content:
-                            reply = ""
-                            for content in message.content:
-                                if hasattr(content, 'text') and hasattr(content.text, 'value'):
-                                    reply += content.text.value
-                            if reply:
-                                logging.info("Successfully received assistant reply")
-                                return reply
-                
-                return "⚠️ No response received from assistant."
-                
-            elif run_status.status in ["failed", "cancelled", "expired"]:
-                error_msg = f"Run failed with status: {run_status.status}"
-                if hasattr(run_status, 'last_error') and run_status.last_error:
-                    error_msg += f" - {run_status.last_error}"
-                logging.error(error_msg)
-                return f"⚠️ Sorry, I encountered an error: {error_msg}"
-            
-            time.sleep(1)  # Wait before checking again
+        # Safely add mood context to the message
+        mood = getattr(session_state, 'mood', None)
+        if mood and user_message:
+            mood_context = f"[User's current mood: {mood}] "
+            full_message = mood_context + user_message
+        else:
+            # Use original message if mood is not available
+            full_message = user_message if user_message else "Hello"
         
-        return "⚠️ Request timed out. Please try again."
+        # Send message to Gemini
+        response = chat_session.send_message(full_message)
         
-    except OpenAIError as e:
-        logging.exception("OpenAI API error occurred.")
-        return f"⚠️ AI service error: {str(e)}"
+        logging.info("Successfully received Gemini response")
+        return response.text
+        
     except Exception as e:
-        logging.exception("Unexpected error occurred.")
-        return f"⚠️ Unexpected error: {str(e)}"
+        logging.exception("Gemini API error occurred")
+        return f"⚠️ AI service error: {str(e)}"
 
-# Fallback responses if OpenAI fails
+# Fallback responses (keep the same)
 FALLBACK_RESPONSES = {
     "joy": [
         "It's wonderful to see you feeling happy! What's bringing you joy today?",
@@ -165,5 +148,8 @@ FALLBACK_RESPONSES = {
 
 def get_fallback_response(mood):
     """Get a fallback response when AI is unavailable"""
+    # Handle case where mood might be None
+    if not mood:
+        mood = "neutral"
     responses = FALLBACK_RESPONSES.get(mood, ["I'm here to listen. How can I support you today?"])
     return random.choice(responses)
